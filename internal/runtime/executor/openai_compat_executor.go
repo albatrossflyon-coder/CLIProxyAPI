@@ -1112,7 +1112,8 @@ func openAICompatCredentialStatus(status int, body []byte) int {
 	// Per-credential capability limits: the same request succeeds on another
 	// credential, so cool this one down and move on.
 	for _, marker := range []string{"rate_limit_exceeded", "rate_limited", "tokens per minute",
-		"longer than the free tier allows", "free_prompt_cap", "oneof at '/' not met"} {
+		"longer than the free tier allows", "free_prompt_cap", "oneof at '/' not met",
+		"'reasoning_content' is unsupported"} {
 		if strings.Contains(text, marker) {
 			return http.StatusTooManyRequests
 		}
