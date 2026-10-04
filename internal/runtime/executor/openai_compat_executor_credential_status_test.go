@@ -31,6 +31,12 @@ func TestNewOpenAICompatStatusError_CredentialFailuresRotate(t *testing.T) {
 		{"groq TPM cap as 413", http.StatusRequestEntityTooLarge,
 			`{"error":{"message":"Request too large for model openai/gpt-oss-120b on tokens per minute (TPM): Limit 8000, Requested 8887, please reduce your message size and try again.","type":"tokens","code":"rate_limit_exceeded"}}`,
 			http.StatusTooManyRequests},
+		{"orcarouter free prompt cap as 400", http.StatusBadRequest,
+			`{"error":{"message":"This prompt is longer than the free tier allows for a single request.","type":"invalid_request_error","code":"free_rate_limited","metadata":{"reason":"err_free_prompt_cap","retryable":false}}}`,
+			http.StatusTooManyRequests},
+		{"cloudflare rejects tool-result turns as 400", http.StatusBadRequest,
+			`{"errors":[{"message":"AiError: Bad input: Error: oneOf at '/' not met, 0 matches: required properties at '/' are 'prompt'","code":5006}],"success":false}`,
+			http.StatusTooManyRequests},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
