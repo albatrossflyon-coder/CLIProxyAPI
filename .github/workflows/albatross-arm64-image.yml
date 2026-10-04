@@ -1,0 +1,30 @@
+name: albatross arm64 image
+
+# Builds the patched proxy for the Oracle A1 (arm64) VPS and publishes it to GHCR.
+on:
+  push:
+    branches: [fix/body-quota-rotation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ghcr.io/albatrossflyon-coder/cliproxyapi:rotfix
+            ghcr.io/albatrossflyon-coder/cliproxyapi:rotfix-${{ github.sha }}

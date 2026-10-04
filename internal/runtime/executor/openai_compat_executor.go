@@ -1083,11 +1083,36 @@ func (e statusErr) IsCredentialScoped() bool   { return e.credentialScoped }
 const openAICompatTPMFallbackRetryAfter = time.Minute
 
 func newOpenAICompatStatusError(status int, headers http.Header, body []byte) statusErr {
+	status = openAICompatCredentialStatus(status, body)
 	return statusErr{
 		code:       status,
 		msg:        string(body),
 		retryAfter: openAICompatRetryAfter(status, headers, body, time.Now()),
 	}
+}
+
+// openAICompatCredentialStatus remaps credential-level failures that some
+// OpenAI-compatible relays report with request-fault statuses (400, 403, 413,
+// 422). Left as-is, the conductor treats them as a bad request and never tries
+// the next credential, so one drained key stalls every client on that alias.
+// Out-of-credit bodies become 402 (credential cooldown); per-minute token caps
+// become 429 (quota cooldown). Both rotate to the next credential.
+func openAICompatCredentialStatus(status int, body []byte) int {
+	if status < http.StatusBadRequest || status >= http.StatusInternalServerError ||
+		status == http.StatusPaymentRequired || status == http.StatusTooManyRequests {
+		return status
+	}
+	text := strings.ToLower(string(body))
+	for _, marker := range []string{"insufficient_quota", "insufficient_user_quota", "insufficient balance",
+		"balance=0", "credit balance", "out of quota", "billing_error", "overdue-payment", "good standing"} {
+		if strings.Contains(text, marker) {
+			return http.StatusPaymentRequired
+		}
+	}
+	if strings.Contains(text, "rate_limit_exceeded") || strings.Contains(text, "tokens per minute") {
+		return http.StatusTooManyRequests
+	}
+	return status
 }
 
 // openAICompatRetryAfter preserves the provider's standard Retry-After signal.
