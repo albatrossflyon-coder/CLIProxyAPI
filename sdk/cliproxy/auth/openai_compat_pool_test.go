@@ -366,6 +366,31 @@ func TestManagerExecute_OpenAICompatAliasPoolStopsOnBadRequest(t *testing.T) {
 	}
 }
 
+// 2026-10-07: a pool home answers 400 "The requested model is not available." (seen live on the VPS);
+// it must rotate to the next home instead of being returned to the agent.
+func TestManagerExecute_OpenAICompatAliasPoolFallsBackOnModelNotAvailable(t *testing.T) {
+	alias := "agent-pool"
+	executor := &openAICompatPoolExecutor{
+		id: openAICompatPoolProviderKey,
+		executeErrors: map[string]error{"dead-home": &Error{
+			HTTPStatus: http.StatusBadRequest,
+			Message:    `{"type":"bad_request","message":"The requested model is not available."}`,
+		}},
+	}
+	m := newOpenAICompatPoolTestManager(t, alias, []internalconfig.OpenAICompatibilityModel{
+		{Name: "dead-home", Alias: alias},
+		{Name: "live-home", Alias: alias},
+	}, executor)
+
+	resp, err := m.Execute(context.Background(), []string{openAICompatPoolProviderKey}, cliproxyexecutor.Request{Model: alias}, cliproxyexecutor.Options{})
+	if err != nil {
+		t.Fatalf("execute error = %v, want fallback to live-home", err)
+	}
+	if string(resp.Payload) != "live-home" {
+		t.Fatalf("payload = %q, want %q", string(resp.Payload), "live-home")
+	}
+}
+
 func TestManagerExecute_OpenAICompatAliasPoolFallsBackOnModelSupportBadRequest(t *testing.T) {
 	alias := "claude-opus-4.66"
 	modelSupportErr := &Error{

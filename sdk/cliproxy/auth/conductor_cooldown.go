@@ -1810,6 +1810,7 @@ func isModelSupportErrorMessage(message string) bool {
 		"requested model is not supported",
 		"requested model is unsupported",
 		"requested model is unavailable",
+		"requested model is not available",
 		"model is not supported",
 		"model not supported",
 		"unsupported model",
