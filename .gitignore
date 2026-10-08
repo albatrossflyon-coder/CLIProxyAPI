@@ -66,3 +66,6 @@ docker-compose.override.yml
 
 # Local LLM Wiki vault
 .llm-wiki
+
+# local runtime log
+cli-proxy-api.log
